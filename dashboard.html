@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Reporting Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    h1, h2, h3 {
+      color: #f9fafb;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Outer section box for grouping */
+    .section-box {
+      border: 1px solid #334155;  /* slate-700ish */
+      border-radius: 0.75rem;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      background-color: #111827;
+    }
+
+    /* Flex container for two columns inside a section box */
+    .two-columns {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: nowrap;
+      justify-content: space-between;
+    }
+
+    .two-columns > div {
+      flex: 1 1 48%;
+      min-width: 280px;
+      border: 1px solid #1f2937;
+      border-radius: 0.75rem;
+      background: #111827;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Metric grid styling */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      background: #020617;
+      border-radius: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #1e293b;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.2rem;
+    }
+
+    .metric-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .metric-small {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    /* Container for per-DUT pie charts */
+    #dut-piecharts {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    #dut-piecharts .card {
+      flex: 1 1 320px;
+      min-width: 280px;
+      border: 1px solid #1f2937;
+      border-radius: 0.75rem;
+      background: #111827;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+    }
+
+    canvas {
+      max-width: 100%;
+      max-height: 320px;
+      flex-grow: 1;
+    }
+
+    /* Flex container for average and total execution time charts */
+    #dut-times {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    #dut-times > div {
+      flex: 1 1 48%;
+      min-width: 280px;
+      border: 1px solid #1f2937;
+      border-radius: 0.75rem;
+      background: #111827;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Table styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.4rem 0.5rem;
+      text-align: right;
+    }
+
+    th {
+      background: #020617;
+      color: #9ca3af;
+      border-bottom: 1px solid #1f2937;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    td {
+      border-bottom: 1px solid #111827;
+      color: #e5e7eb;
+    }
+
+    td:first-child, th:first-child {
+      text-align: left;
+    }
+
+    /* Error box styling */
+    .error {
+      background: #450a0a;
+      color: #fecaca;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #7f1d1d;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>QA Test Reporting Dashboard</h1>
+  <p class="subtitle">
+    Summary of aggregated results per DUT configuration, from summary.json</code>.
+  </p>
+
+  <div id="error" class="error" style="display:none;"></div>
+
+  <!-- Outer section box for overall charts -->
+  <div class="section-box">
+    <div class="two-columns">
+      <div>
+        <h2>Overall status</h2>
+        <div class="metric-grid">
+          <div class="metric"><span class="metric-label">Total tests</span><span id="total-tests" class="metric-value">–</span></div>
+          <div class="metric"><span class="metric-label">Passed</span><span id="total-passed" class="metric-value">–</span></div>
+          <div class="metric"><span class="metric-label">Failed</span><span id="total-failed" class="metric-value">–</span></div>
+          <div class="metric"><span class="metric-label">Skipped</span><span id="total-skipped" class="metric-value">–</span></div>
+          <div class="metric"><span class="metric-label">Exec. time</span><span id="total-time" class="metric-value">–</span><span class="metric-small">seconds total</span></div>
+          <div class="metric"><span class="metric-label">Avg. test time</span><span id="avg-time" class="metric-value">–</span><span class="metric-small">seconds per test</span></div>
+          <div class="metric" style="grid-column: span 3;">
+            <span class="metric-label">Pass rate</span>
+            <span id="overall-passrate" class="metric-value">–</span><span class="metric-small">percentage</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Overall distribution</h2>
+        <canvas id="overall-pie"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per DUT pie charts section - each with own border -->
+  <div class="section-box">
+    <h2>Pass / Fail / Skip per DUT</h2>
+    <div id="dut-piecharts">
+      <!-- Dynamically generated pie charts here -->
+    </div>
+  </div>
+
+  <!-- Execution time charts section -->
+  <div class="section-box" id="dut-times">
+    <div>
+      <h2>Average execution time per DUT</h2>
+      <canvas id="dut-bar-avg"></canvas>
+    </div>
+    <div>
+      <h2>Total execution time per DUT</h2>
+      <canvas id="dut-bar-total"></canvas>
+    </div>
+  </div>
+
+  <!-- Table section -->
+  <div class="section-box">
+    <h2>Details per DUT</h2>
+    <table id="dut-table">
+      <thead>
+        <tr>
+          <th>DUT</th>
+          <th>Passed</th>
+          <th>Failed</th>
+          <th>Skipped</th>
+          <th>Total</th>
+          <th>Pass&nbsp;%</th>
+          <th>Exec&nbsp;time&nbsp;(s)</th>
+          <th>Avg&nbsp;test&nbsp;(s)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadSummary() {
+      const errorBox = document.getElementById("error");
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+
+      try {
+        const resp = await fetch("summary/summary.json", { cache: "no-store" });
+        if (!resp.ok) {
+          throw new Error("Failed to load summary.json (" + resp.status + "). Please run main.py and open via server (no file://).");
+        }
+        const data = await resp.json();
+        renderDashboard(data);
+      } catch (err) {
+        errorBox.style.display = "block";
+        errorBox.textContent = err.message +
+          " Suggestion: run `python -m http.server` and open http://localhost:8000/dashboard.html";
+        console.error(err);
+      }
+    }
+
+    function renderDashboard(summary) {
+      const overall = summary.overall || {};
+      const dutStats = summary.dut_stats || {};
+      const duts = Object.keys(dutStats).sort();
+
+      // Overall metrics
+      document.getElementById("total-tests").textContent = overall.total_tests ?? 0;
+      document.getElementById("total-passed").textContent = overall.passed ?? 0;
+      document.getElementById("total-failed").textContent = overall.failed ?? 0;
+      document.getElementById("total-skipped").textContent = overall.skipped ?? 0;
+      document.getElementById("total-time").textContent = (overall.execution_time ?? 0).toFixed(2);
+      document.getElementById("avg-time").textContent = (overall.average_execution_time ?? 0).toFixed(3);
+      document.getElementById("overall-passrate").textContent = (overall.pass_rate ?? 0).toFixed(1) + " %";
+
+      // Overall distribution pie chart
+      const ctxPie = document.getElementById("overall-pie").getContext("2d");
+      new Chart(ctxPie, {
+        type: "doughnut",
+        data: {
+          labels: ["Passed", "Failed", "Skipped"],
+          datasets: [{
+            data: [overall.passed ?? 0, overall.failed ?? 0, overall.skipped ?? 0],
+            backgroundColor: [
+              "rgba(34, 197, 94, 0.8)",
+              "rgba(248, 113, 113, 0.8)",
+              "rgba(59, 130, 246, 0.8)"
+            ],
+            borderColor: [
+              "rgba(21, 128, 61, 1)",
+              "rgba(185, 28, 28, 1)",
+              "rgba(37, 99, 235, 1)"
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: { legend: { labels: { color: "#e5e7eb" } } }
+        }
+      });
+
+      // Per DUT pie charts container
+      const piechartsContainer = document.getElementById("dut-piecharts");
+      piechartsContainer.innerHTML = "";
+
+      const avgExecTimeArr = [];
+      const totalExecTimeArr = [];
+      const labels = [];
+
+      // Clear table body
+      const tbody = document.querySelector("#dut-table tbody");
+      tbody.innerHTML = "";
+
+      duts.forEach(dut => {
+        const s = dutStats[dut];
+        const passed = s.passed ?? 0;
+        const failed = s.failed ?? 0;
+        const skipped = s.skipped ?? 0;
+        const total = s.total ?? (passed + failed + skipped);
+        const passRate = s.pass_rate ?? (total ? (passed/total)*100 : 0);
+        const execTime = s.execution_time ?? 0;
+        const avgExec = s.average_execution_time ?? (total ? execTime/total : 0);
+
+        labels.push(dut);
+        avgExecTimeArr.push(avgExec);
+        totalExecTimeArr.push(execTime);
+
+        // Create pie chart card for each DUT with border
+        const pieDiv = document.createElement("div");
+        pieDiv.className = "card";
+        pieDiv.innerHTML = `<h3>${dut}</h3><canvas id="pie-${dut}"></canvas>`;
+        piechartsContainer.appendChild(pieDiv);
+
+        const ctx = pieDiv.querySelector("canvas").getContext("2d");
+        new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["Passed", "Failed", "Skipped"],
+            datasets: [{
+              data: [passed, failed, skipped],
+              backgroundColor: [
+                "rgba(34, 197, 94, 0.8)",
+                "rgba(248, 113, 113, 0.8)",
+                "rgba(59, 130, 246, 0.8)"
+              ],
+              borderColor: [
+                "rgba(21, 128, 61, 1)",
+                "rgba(185, 28, 28, 1)",
+                "rgba(37, 99, 235, 1)"
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            plugins: { legend: { labels: { color: "#e5e7eb" } } }
+          }
+        });
+
+        // Insert row in table
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${dut}</td>
+          <td>${passed}</td>
+          <td>${failed}</td>
+          <td>${skipped}</td>
+          <td>${total}</td>
+          <td>${passRate.toFixed(1)}</td>
+          <td>${execTime.toFixed(2)}</td>
+          <td>${avgExec.toFixed(3)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Average execution time bar chart
+      const ctxAvg = document.getElementById("dut-bar-avg").getContext("2d");
+      new Chart(ctxAvg, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Avg test time (s)",
+            data: avgExecTimeArr,
+            backgroundColor: "rgba(56, 189, 248, 0.8)"
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: "#e5e7eb" }, grid: { color: "rgba(55, 65, 81, 0.4)" } },
+            y: { beginAtZero: true, ticks: { color: "#e5e7eb" }, grid: { color: "rgba(55, 65, 81, 0.4)" } }
+          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } }
+        }
+      });
+
+      // Total execution time bar chart
+      const ctxTotal = document.getElementById("dut-bar-total").getContext("2d");
+      new Chart(ctxTotal, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Total exec time (s)",
+            data: totalExecTimeArr,
+            backgroundColor: "rgba(248, 181, 99, 0.8)"
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: "#e5e7eb" }, grid: { color: "rgba(55, 65, 81, 0.4)" } },
+            y: { beginAtZero: true, ticks: { color: "#e5e7eb" }, grid: { color: "rgba(55, 65, 81, 0.4)" } }
+          },
+          plugins: { legend: { labels: { color: "#e5e7eb" } } }
+        }
+      });
+    }
+
+    loadSummary();
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+DUT,passed,failed,skipped,total,pass_rate (%),execution_time,average_execution_time
+DUT_A,1,1,1,3,33.33,4.5,1.5
+DUT_B,2,0,0,2,100.0,3.2,1.6
+ALL,0,0,0,0,0.0,0.0,0.0

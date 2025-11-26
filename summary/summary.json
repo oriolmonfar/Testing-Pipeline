@@ -1,0 +1,31 @@
+{
+  "overall": {
+    "total_tests": 5,
+    "passed": 3,
+    "failed": 1,
+    "skipped": 1,
+    "execution_time": 7.7,
+    "average_execution_time": 1.54,
+    "pass_rate": 60.0
+  },
+  "dut_stats": {
+    "DUT_A": {
+      "passed": 1,
+      "failed": 1,
+      "skipped": 1,
+      "total": 3,
+      "execution_time": 4.5,
+      "average_execution_time": 1.5,
+      "pass_rate": 33.33333333333333
+    },
+    "DUT_B": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "total": 2,
+      "execution_time": 3.2,
+      "average_execution_time": 1.6,
+      "pass_rate": 100.0
+    }
+  }
+}
