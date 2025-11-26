@@ -1,7 +1,7 @@
 from pathlib import Path
 import argparse
 from parse import load_sessions
-from aggregate import summarize_sessions, save_summary_json, save_summary_csv, save_summary_sqlite
+from aggregate import summarize_sessions, save_summary_json, save_summary_csv
 
 def main():
     # -------------------------
@@ -25,12 +25,6 @@ def main():
         type=str,
         default="summary.csv",
         help="Output CSV file path"
-    )
-    parser.add_argument(
-        "--sqlite",
-        type=str,
-        default="",
-        help="Path to output SQLite summary database."
     )
     args = parser.parse_args()
 
@@ -75,9 +69,6 @@ def main():
 
     save_summary_json(summary, output_json)
     save_summary_csv(summary, output_csv)
-    if args.sqlite:
-        save_summary_sqlite(summary, Path(args.sqlite))
-        print(f"Saved SQLite summary to {args.sqlite}")
  
 
 
